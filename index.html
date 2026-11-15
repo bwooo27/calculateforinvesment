@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>EDUCATION | Stock Investment</title>
+<title>ANGLER | Stock Investment</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -641,14 +641,29 @@ footer p {
                 <div class="chart-price" id="chartPrice">
                     Rp4.120
                 </div>
-                <span class="positive">+2.45% ▲</span>
+                <span class="positive" id="chartChange">Mengambil data...</span>
             </div>
 
-            <div class="chart-buttons">
+            <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
+                <select id="chartStockSelect" aria-label="Pilih saham untuk grafik"
+                    style="background:#1b241e;color:white;border:1px solid #ffffff25;padding:10px 12px;border-radius:5px;font-family:inherit;">
+                    <option value="BBRI">BBRI — Bank BRI</option>
+                    <option value="BBCA">BBCA — Bank Central Asia</option>
+                    <option value="BMRI">BMRI — Bank Mandiri</option>
+                    <option value="BBNI">BBNI — Bank Negara Indonesia</option>
+                    <option value="TLKM">TLKM — Telkom Indonesia</option>
+                    <option value="ASII">ASII — Astra International</option>
+                    <option value="ICBP">ICBP — Indofood CBP</option>
+                    <option value="INDF">INDF — Indofood Sukses Makmur</option>
+                    <option value="UNTR">UNTR — United Tractors</option>
+                    <option value="GOTO">GOTO — GoTo Gojek Tokopedia</option>
+                </select>
+                <div class="chart-buttons">
                 <button class="active" data-period="1D">1D</button>
                 <button data-period="1W">1W</button>
                 <button data-period="1M">1M</button>
                 <button data-period="1Y">1Y</button>
+                </div>
             </div>
 
         </div>
@@ -656,6 +671,9 @@ footer p {
         <div class="chart-wrapper">
             <canvas id="stockChart"></canvas>
         </div>
+        <p style="color:#929b95;font-size:11px;margin-top:14px;">
+            Pilih kode saham untuk mengganti grafik. Data historis harian; ketersediaan bergantung pada penyedia data.
+        </p>
 
     </div>
 
@@ -694,8 +712,8 @@ footer p {
                         <span class="stock-name">Bank BRI</span>
                         <span class="stock-code">BBRI</span>
                     </td>
-                    <td>4,120</td>
-                    <td class="positive">+2.45%</td>
+                    <td id="table-price-BBRI">Memuat...</td>
+                    <td id="table-change-BBRI" class="positive">Memuat...</td>
                     <td><button class="watch-btn">+ Watch</button></td>
                 </tr>
 
@@ -704,8 +722,8 @@ footer p {
                         <span class="stock-name">Bank Central Asia</span>
                         <span class="stock-code">BBCA</span>
                     </td>
-                    <td>9,450</td>
-                    <td class="negative">-0.35%</td>
+                    <td id="table-price-BBCA">Memuat...</td>
+                    <td id="table-change-BBCA" class="positive">Memuat...</td>
                     <td><button class="watch-btn">+ Watch</button></td>
                 </tr>
 
@@ -714,8 +732,8 @@ footer p {
                         <span class="stock-name">Telkom Indonesia</span>
                         <span class="stock-code">TLKM</span>
                     </td>
-                    <td>3,180</td>
-                    <td class="positive">+1.10%</td>
+                    <td id="table-price-TLKM">Memuat...</td>
+                    <td id="table-change-TLKM" class="positive">Memuat...</td>
                     <td><button class="watch-btn">+ Watch</button></td>
                 </tr>
 
@@ -724,8 +742,8 @@ footer p {
                         <span class="stock-name">Astra International</span>
                         <span class="stock-code">ASII</span>
                     </td>
-                    <td>5,050</td>
-                    <td class="positive">+0.65%</td>
+                    <td id="table-price-ASII">Memuat...</td>
+                    <td id="table-change-ASII" class="positive">Memuat...</td>
                     <td><button class="watch-btn">+ Watch</button></td>
                 </tr>
 
@@ -839,7 +857,7 @@ footer p {
 <footer>
 
     <div class="logo">
-        INVESMENT<span>.</span>
+        ANGLER<span>.</span>
     </div>
 
     <p>
@@ -892,8 +910,27 @@ const STOCKS = {
     IHSG: "^JKSE",
     BBRI: "BBRI.JK",
     BBCA: "BBCA.JK",
+    BMRI: "BMRI.JK",
+    BBNI: "BBNI.JK",
     TLKM: "TLKM.JK",
-    ASII: "ASII.JK"
+    ASII: "ASII.JK",
+    ICBP: "ICBP.JK",
+    INDF: "INDF.JK",
+    UNTR: "UNTR.JK",
+    GOTO: "GOTO.JK"
+};
+
+const STOCK_NAMES = {
+    BBRI: "BANK BRI",
+    BBCA: "BANK CENTRAL ASIA",
+    BMRI: "BANK MANDIRI",
+    BBNI: "BANK NEGARA INDONESIA",
+    TLKM: "TELKOM INDONESIA",
+    ASII: "ASTRA INTERNATIONAL",
+    ICBP: "INDOFOOD CBP",
+    INDF: "INDOFOOD SUKSES MAKMUR",
+    UNTR: "UNITED TRACTORS",
+    GOTO: "GOTO GOJEK TOKOPEDIA"
 };
 
 const formatNumber = value => new Intl.NumberFormat("id-ID", {
@@ -933,12 +970,14 @@ async function fetchYahooChart(symbol, range = "5d", interval = "1d") {
 }
 
 let stockChart;
-let bbriHistory = [];
+const stockHistories = {};
+let selectedChartStock = "BBRI";
 
 function updateChart(period = "1D") {
-    if (!stockChart || !bbriHistory.length) return;
+    const history = stockHistories[selectedChartStock] || [];
+    if (!stockChart || !history.length) return;
     const count = { "1D": 1, "1W": 5, "1M": 22, "1Y": 252 }[period] || 1;
-    const rows = bbriHistory.slice(-count);
+    const rows = history.slice(-count);
     const labels = rows.map(row => {
         const d = new Date(row.time * 1000);
         return period === "1D"
@@ -980,7 +1019,7 @@ stockChart = new Chart(ctx, {
 async function refreshStockPrices() {
     const symbols = Object.entries(STOCKS);
     const results = await Promise.allSettled(symbols.map(async ([key, ticker]) => {
-        const range = key === "BBRI" ? "1y" : "5d";
+        const range = key === "IHSG" ? "1y" : "1y";
         const result = await fetchYahooChart(ticker, range, "1d");
         const quotes = result.indicators?.quote?.[0];
         const closes = quotes?.close || [];
@@ -1017,10 +1056,16 @@ async function refreshStockPrices() {
         if (tablePrice) tablePrice.textContent = formatRupiah(latest.close);
         setChange(tableChange, change);
 
-        if (key === "BBRI") {
-            bbriHistory = valid;
+        if (key !== "IHSG") {
+            stockHistories[key] = valid;
+        }
+
+        if (key === selectedChartStock) {
+            document.querySelector(".chart-header h3").textContent =
+                `${key} / ${STOCK_NAMES[key] || key}`;
             document.getElementById("chartPrice").textContent = formatRupiah(latest.close);
             setChange(document.getElementById("chartChange"), change);
+            stockChart.data.datasets[0].label = `Harga ${key}`;
             const active = document.querySelector(".chart-buttons button.active");
             updateChart(active?.dataset.period || "1D");
         }
@@ -1058,6 +1103,33 @@ document.addEventListener("visibilitychange", () => {
     if (!document.hidden) refreshStockPrices().catch(console.error);
 });
 
+
+// PILIH SAHAM UNTUK GRAFIK ANALISIS
+document.getElementById("chartStockSelect").addEventListener("change", event => {
+    selectedChartStock = event.target.value;
+    const history = stockHistories[selectedChartStock] || [];
+    const latest = history[history.length - 1];
+    const previous = history.length > 1 ? history[history.length - 2] : null;
+
+    document.querySelector(".chart-header h3").textContent =
+        `${selectedChartStock} / ${STOCK_NAMES[selectedChartStock] || selectedChartStock}`;
+    stockChart.data.datasets[0].label = `Harga ${selectedChartStock}`;
+
+    if (latest) {
+        document.getElementById("chartPrice").textContent = formatRupiah(latest.close);
+        const change = previous && previous.close
+            ? ((latest.close - previous.close) / previous.close) * 100 : 0;
+        setChange(document.getElementById("chartChange"), change);
+        const active = document.querySelector(".chart-buttons button.active");
+        updateChart(active?.dataset.period || "1D");
+    } else {
+        document.getElementById("chartPrice").textContent = "—";
+        document.getElementById("chartChange").textContent = "Data belum tersedia";
+        stockChart.data.labels = [];
+        stockChart.data.datasets[0].data = [];
+        stockChart.update();
+    }
+});
 
 // PILIH PERIODE GRAFIK
 document.querySelectorAll(".chart-buttons button").forEach(button => {
