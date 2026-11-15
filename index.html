@@ -923,7 +923,7 @@ function showUnavailable(symbol, message = "Data tidak tersedia") {
 }
 
 async function fetchYahooChart(symbol, range = "5d", interval = "1d") {
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=${interval}`;
+    const url = `https://proxy.cors.dev/https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=${interval}`;
     const response = await fetch(url, { cache: "no-store" });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const json = await response.json();
